@@ -1,0 +1,347 @@
+<title>ESD 影片模型跨院比較</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: a single reading column of sections; summary first (findings + overview heatmaps), then the interactive per-test-set bar chart, per-phase heatmap, hemostasis note and the full table. */
+:root {
+  --bg: #f9f9f7; --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e; --muted: #77756f;
+  --grid: #e1e0d9; --axis: #c3c2b7; --ring: rgba(11,11,11,0.10); --accent: #256abf; --wash: #eef3fb;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100;
+  --pos: #006300; --neg: #c23a3a;
+  --font-body: "Inter", "Noto Sans TC", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-head: "Noto Sans TC", "Inter", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7; --muted: #9a988f;
+  --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,0.10); --accent: #5598e7; --wash: #172233;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --pos: #0ca30c; --neg: #e66767; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7; --muted: #9a988f;
+  --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,0.10); --accent: #5598e7; --wash: #172233;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --pos: #0ca30c; --neg: #e66767; color-scheme: dark }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.55; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-block: 28px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 28px; }
+h1, h2, h3 { font-family: var(--font-head); text-wrap: balance; margin: 0; }
+h1 { font-size: 1.9rem; font-weight: 700; letter-spacing: 0.01em; }
+h2 { font-size: 1.25rem; font-weight: 700; }
+h3 { font-size: 1rem; font-weight: 600; }
+p { margin: 0; max-width: 72ch; }
+.lede { color: var(--ink-2); }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+section { display: grid; gap: 14px; min-width: 0; }
+.panel { background: var(--surface); border: 1px solid var(--ring); border-radius: 10px; padding: 18px; min-width: 0; display: grid; gap: 14px; }
+.findings { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.finding { background: var(--surface); border: 1px solid var(--ring); border-radius: 10px; padding: 14px 16px; display: grid; gap: 6px; align-content: start; }
+.finding b.num { font-family: var(--font-body); font-size: 1.6rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.finding span { color: var(--ink-2); font-size: 0.9rem; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 0.85rem; color: var(--ink-2); align-items: center; }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 6px; }
+.legend .hatch { background: repeating-linear-gradient(45deg, var(--muted) 0 2px, transparent 2px 5px); border: 1px solid var(--muted); }
+.controls { display: flex; flex-wrap: wrap; gap: 10px 22px; align-items: center; }
+.seg { display: inline-flex; flex-wrap: wrap; gap: 4px; background: var(--bg); border: 1px solid var(--ring); border-radius: 8px; padding: 3px; }
+.seg button { font: inherit; font-size: 0.85rem; border: 0; background: transparent; color: var(--ink-2); padding: 5px 11px; border-radius: 6px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: 0 0 0 1px var(--ring); }
+.seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.ctl-label { font-size: 0.78rem; color: var(--muted); font-weight: 600; letter-spacing: 0.04em; margin-right: 6px; }
+.scroll { overflow-x: auto; min-width: 0; }
+svg text { fill: var(--ink-2); font-family: var(--font-body); }
+.multiples { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr)); gap: 14px; }
+.hm { border-collapse: separate; border-spacing: 2px; width: 100%; font-variant-numeric: tabular-nums; font-size: 0.86rem; }
+.hm th { font-weight: 600; color: var(--ink-2); font-size: 0.78rem; text-align: center; padding: 4px; }
+.hm th.row { text-align: left; white-space: nowrap; color: var(--ink); font-weight: 500; font-size: 0.82rem; }
+.hm td { text-align: center; padding: 6px 4px; border-radius: 4px; position: relative; }
+.hm td.na { color: var(--muted); background: transparent; }
+.hm td.ext::after { content: "外"; position: absolute; top: 1px; right: 3px; font-size: 0.6rem; opacity: 0.8; }
+.hm td.best { font-weight: 700; box-shadow: inset 0 0 0 2px var(--ink); }
+.hm tr.group th { text-align: left; padding-top: 10px; font-size: 0.85rem; color: var(--ink); }
+.tip { position: fixed; z-index: 20; pointer-events: none; background: var(--surface); color: var(--ink); border: 1px solid var(--ring);
+  border-radius: 8px; padding: 9px 11px; font-size: 0.82rem; line-height: 1.45; box-shadow: 0 6px 24px rgba(0,0,0,0.18); max-width: 300px; font-variant-numeric: tabular-nums; }
+.tip .t { font-weight: 600; margin-bottom: 3px; }
+.tip .k { color: var(--ink-2); }
+table.full { border-collapse: collapse; width: 100%; font-size: 0.82rem; font-variant-numeric: tabular-nums; }
+table.full th, table.full td { padding: 6px 8px; border-bottom: 1px solid var(--grid); text-align: right; white-space: nowrap; }
+table.full th { color: var(--ink-2); font-weight: 600; position: sticky; top: 0; background: var(--surface); }
+table.full td.l, table.full th.l { text-align: left; }
+table.full tr.mfirst td { border-top: 1px solid var(--axis); }
+.pos { color: var(--pos); } .neg { color: var(--neg); }
+.sw { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 6px; }
+.note { font-size: 0.86rem; color: var(--ink-2); display: grid; gap: 6px; }
+.note li { margin-left: -6px; }
+.hemo { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; align-items: start; }
+.stack { display: grid; gap: 10px; }
+.stackrow { display: grid; gap: 4px; }
+.bar100 { display: flex; height: 22px; border-radius: 4px; overflow: hidden; gap: 2px; background: var(--surface); }
+.bar100 div { display: flex; align-items: center; padding: 0 8px; font-size: 0.78rem; color: #fff; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.kv { font-variant-numeric: tabular-nums; }
+footer { color: var(--muted); font-size: 0.8rem; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header style="display:grid;gap:10px">
+    <div class="eyebrow">ESD 手術階段辨識 · 影片 VLM · 2026-11</div>
+    <h1>ESD 影片模型跨院比較</h1>
+    <p class="lede">四個影片模型（Molmo2-8B、InternVideo3-8B、Qwen3.8-27B、VideoChat3-4B），用七種訓練資料組合，在三個測試集上的表現：台大（NTUH，13 例）、Renji 大腸 ESD（CNLs，30 例）、Renji 胃 ESD（EGC，20 例）。主要指標是 Exp 1 的逐秒 case-macro-F1：每例先算出現過的 phase 的平均 F1，再對病例平均。</p>
+  </header>
+
+  <section aria-labelledby="f-h">
+    <h2 id="f-h">重點</h2>
+    <div class="findings">
+      <div class="finding"><span class="eyebrow">整體最平衡</span><b class="num">0.848</b><span>Molmo2 用 NTUH+CNLs+EGC 三家合併訓練，三個測試集平均 case-macro-F1（NTUH 0.804／CNLs 0.824／EGC 0.915）。四個模型都是三家合併的平均最高。</span></div>
+      <div class="finding"><span class="eyebrow">自家資料最準，但不對稱</span><b class="num">−0.03～−0.06</b><span>Renji 合併訓練測 NTUH，只比 NTUH 自訓低 0.03–0.06（不顯著）；反過來 NTUH 訓練測 Renji 低 0.10–0.37（p &lt; 0.001）。</span></div>
+      <div class="finding"><span class="eyebrow">混合訓練不傷自家</span><b class="num">+0.043</b><span>Renji CNLs 加入 NTUH 不會變差；Molmo2 在 CNLs 上顯著提升（p &lt; 0.001 / 0.002）。NTUH 上加入 Renji 也沒有變差（13 例不顯著）。</span></div>
+      <div class="finding"><span class="eyebrow">跨院弱點：止血</span><b class="num">≤ 0.03</b><span>NTUH 訓練的模型在 Renji 上止血 F1 幾乎為 0。Renji 只把剝離結束後的處理標為止血，剝離中途的止血都算剝離。</span></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="ov-h">
+    <h2 id="ov-h">總覽：每個模型的 7 × 3 熱圖</h2>
+    <p class="lede">列是訓練資料、欄是測試集，數字是 case-macro-F1。右上角「外」表示這個測試集不在訓練資料裡（外部測試，取 5 個 fold 模型的平均）；其他格是 OOF（每例由沒看過它的 fold 模型預測）。粗框是該欄最佳。</p>
+    <div class="multiples" id="overview"></div>
+  </section>
+
+  <section aria-labelledby="bar-h">
+    <h2 id="bar-h">依測試集比較</h2>
+    <div class="panel">
+      <div class="controls">
+        <div><span class="ctl-label">測試集</span><div class="seg" id="seg-test" role="group" aria-label="測試集"></div></div>
+        <div><span class="ctl-label">指標</span><div class="seg" id="seg-metric" role="group" aria-label="指標"></div></div>
+      </div>
+      <div class="legend" id="legend"></div>
+      <div class="scroll"><div id="bars" style="min-width:640px"></div></div>
+      <p class="note" id="bar-note"></p>
+    </div>
+  </section>
+
+  <section aria-labelledby="ph-h">
+    <h2 id="ph-h">四個階段的 F1</h2>
+    <p class="lede" id="ph-lede"></p>
+    <div class="panel"><div class="scroll"><div id="phase" style="min-width:560px"></div></div></div>
+  </section>
+
+  <section aria-labelledby="he-h">
+    <h2 id="he-h">為什麼止血跨院會掉到接近 0</h2>
+    <div class="panel hemo">
+      <div class="stack">
+        <h3>Renji 什麼時候標「止血」（vessel_treatment）</h3>
+        <div class="stackrow"><span class="kv">Renji CNLs：剝離期間 <b>0 秒</b>，剝離結束後 1,411 秒</span>
+          <div class="bar100" role="img" aria-label="Renji CNLs 止血標註：剝離期間 0%，剝離結束後 100%"><div style="flex:100;background:var(--s2)">剝離結束後 100%</div></div></div>
+        <div class="stackrow"><span class="kv">Renji EGC：剝離期間 <b>0 秒</b>，剝離結束後 7,012 秒</span>
+          <div class="bar100" role="img" aria-label="Renji EGC 止血標註：剝離期間 0%，剝離結束後 100%"><div style="flex:100;background:var(--s2)">剝離結束後 100%</div></div></div>
+      </div>
+      <div class="stack">
+        <h3>NTUH 訓練的 Molmo2 在 Renji 上喊「止血」的時間點</h3>
+        <div class="stackrow"><span class="kv">Renji CNLs（16,118 秒，5 個 fold 合計）</span>
+          <div class="bar100" role="img" aria-label="剝離期間 99%，剝離結束後 1%"><div style="flex:99;background:var(--s1)">剝離期間 99%</div><div style="flex:1;background:var(--s2)"></div></div></div>
+        <div class="stackrow"><span class="kv">Renji EGC（10,848 秒）</span>
+          <div class="bar100" role="img" aria-label="剝離期間 86%，剝離結束後 14%"><div style="flex:86;background:var(--s1)">剝離期間 86%</div><div style="flex:14;background:var(--s2)">14%</div></div></div>
+        <div class="legend"><span><i style="background:var(--s1)"></i>剝離期間（Renji 標為剝離）</span><span><i style="background:var(--s2)"></i>剝離結束後</span></div>
+      </div>
+      <p class="note" style="grid-column:1/-1">止血動作本身兩院看起來一樣，差在標註規則：Renji 剝離中途的止血都算 esd（剝離），只有切下腫瘤後的創面處理才標止血。NTUH 訓練的模型在剝離中途認出止血動作，在 Renji 卻全被算錯；Renji 標為止血的切除後時段又多是檢視創面、沖水，模型判成剝離或診斷。NTUH 的 class 13／14 手切 clip 是否包含剝離中途的止血，待確認。</p>
+      <p class="note" style="grid-column:1/-1"><b>對照：兩家 Renji 互測時止血沒有崩。</b>只用 CNLs 訓練測 EGC，止血 F1 為 0.82–0.87；只用 EGC 訓練測 CNLs 為 0.49–0.61。兩家 Renji 用同一套標註規則，所以跨院（跨器官）時止血仍然認得出來；只有和 NTUH 互換時才掉到接近 0，這也支持「差在標註規則」的解釋。</p>
+    </div>
+  </section>
+
+  <section aria-labelledby="tb-h">
+    <h2 id="tb-h">完整數字</h2>
+    <p class="lede" id="tb-lede"></p>
+    <div class="panel"><div class="scroll" style="max-height:640px;overflow-y:auto"><table class="full" id="full"></table></div></div>
+  </section>
+
+  <section aria-labelledby="nt-h">
+    <h2 id="nt-h">方法與限制</h2>
+    <ul class="note">
+      <li>訓練：LoRA r8／α16、lr 1e-4、3 epoch、有效 batch 6、依 validation loss 選 epoch；1 fps、最多 32 幀。四個模型同一組超參數、單一 seed。</li>
+      <li>切分：NTUH 用 Exp 1 的 13 例 5-fold；Renji 用 Qwen3.8 那次的 5-fold。合併設定的 fold k 是各資料集 fold k 的聯集，所以每個資料集都在同一批 test 病例上比。混合訓練是直接合併，NTUH 只占 13–22%。</li>
+      <li>評分：NTUH 用手切 clip 的 ≤32 秒 window；Renji 用 Exp 1 的整段時間軸 32 秒 window（排除 preparation／marking／clips），每秒評分。另附 Renji 訓練格式 clip 的 OOF macro-F1（QwenVideoSegment 評分），兩者不可直接比。</li>
+      <li>檢定：Δ 是和該測試集單一來源模型的差，逐例配對 bootstrap（10,000 次）與 Wilcoxon，未做多重比較校正。NTUH 只有 13 例，信賴區間很寬。</li>
+      <li>每多加一個資料來源，資料量和訓練步數也跟著增加，「資料變多」和「醫院變多」分不開。Molmo2 每幀固定 378×378，其他模型每幀最多 50,176 像素。</li>
+    </ul>
+  </section>
+  <footer>資料來源：scripts/score.py 的輸出（results/scores.json），由 scripts/make_report.py 產生。文字段落的數字為 2026-11-25 的結果。</footer>
+</div>
+<div class="tip" id="tip" hidden></div>
+
+<script>
+const RAW = __DATA__;
+const COLS = ["test","train","model","oof","cm","lo","hi","fm","dx","li","id","hem","d","dlo","dhi","pb","pw","clip"];
+const ROWS = RAW.map(r => Object.fromEntries(COLS.map((c, i) => [c, r[i]])));
+const MODELS = [["molmo2","Molmo2-8B","--s1"],["internvideo3","InternVideo3-8B","--s2"],["qwen38","Qwen3.8-27B","--s3"],["videochat3","VideoChat3-4B","--s4"]];
+const TRAIN = [["ntuh","NTUH"],["cnls","CNLs"],["egc","EGC"],["cnls_egc","CNLs+EGC"],["ntuh_cnls","NTUH+CNLs"],["ntuh_egc","NTUH+EGC"],["ntuh_cnls_egc","NTUH+CNLs+EGC"]];
+const TESTS = [["ntuh","NTUH（13 例）","NTUH"],["cnls","Renji CNLs（30 例）","Renji CNLs"],["egc","Renji EGC（20 例）","Renji EGC"]];
+const HOME = {ntuh: "NTUH", cnls: "CNLs", egc: "EGC"};
+const METRICS = [["cm","case-macro-F1"],["fm","frame-micro-F1"],["dx","診斷 F1"],["li","局部注射 F1"],["id","切開／剝離 F1"],["hem","止血 F1"],["clip","clip OOF macro-F1"]];
+const PHASES = [["dx","診斷"],["li","局部注射"],["id","切開／剝離"],["hem","止血"]];
+const get = (test, train, model) => ROWS.find(r => r.test === test && r.train === train && r.model === model);
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const f3 = x => x == null ? "—" : x.toFixed(3);
+const f2 = x => x == null ? "—" : x.toFixed(2);
+const fp = p => p == null ? "" : (p < 0.001 ? "< 0.001" : p.toFixed(3));
+let state = { test: "ntuh", metric: "cm" };
+try { const s = JSON.parse(localStorage.getItem("esd-xsite") || "{}"); if (s.test) state.test = s.test; if (s.metric) state.metric = s.metric; } catch (e) {}
+const save = () => { try { localStorage.setItem("esd-xsite", JSON.stringify(state)); } catch (e) {} };
+
+// sequential blue ramp: light mode light->dark, dark mode dark->light (low values recede toward the surface)
+const RAMP = ["#cde2fb","#b7d3f6","#9ec5f4","#86b6ef","#6da7ec","#5598e7","#3987e5","#2a78d6","#256abf","#1c5cab","#184f95","#104281"];
+const isDark = () => matchMedia("(prefers-color-scheme: dark)").matches && document.documentElement.dataset.theme !== "light" || document.documentElement.dataset.theme === "dark";
+function cellColor(v, lo = 0.5, hi = 0.95) {
+  const t = Math.max(0, Math.min(1, (v - lo) / (hi - lo)));
+  const ramp = isDark() ? [...RAMP].reverse() : RAMP;
+  const i = Math.round(t * (ramp.length - 1));
+  const darkCell = isDark() ? i < 6 : i >= 6;
+  return { bg: ramp[i], fg: darkCell ? "#ffffff" : "#0b0b0b" };
+}
+
+// ---------- overview heatmaps (small multiples) ----------
+function renderOverview() {
+  const el = document.getElementById("overview"); el.innerHTML = "";
+  for (const [m, name, sv] of MODELS) {
+    const card = document.createElement("div"); card.className = "panel";
+    const best = {};
+    for (const [t] of TESTS) best[t] = Math.max(...TRAIN.map(([tr]) => get(t, tr, m)?.cm ?? -1));
+    let mean = TRAIN.map(([tr]) => { const v = TESTS.map(([t]) => get(t, tr, m)?.cm); return v.every(x => x != null) ? v.reduce((a, b) => a + b) / 3 : null; });
+    const bestMean = Math.max(...mean.filter(x => x != null));
+    let h = `<h3><span class="sw" style="background:var(${sv})"></span>${name}</h3><div class="scroll"><table class="hm"><thead><tr><th class="row">訓練資料 ＼ 測試</th>${TESTS.map(t => `<th>${t[2]}</th>`).join("")}<th>平均</th></tr></thead><tbody>`;
+    TRAIN.forEach(([tr, tl], k) => {
+      h += `<tr><th class="row">${tl}</th>`;
+      for (const [t] of TESTS) {
+        const r = get(t, tr, m);
+        if (!r) { h += `<td class="na">—</td>`; continue; }
+        const c = cellColor(r.cm);
+        h += `<td class="${r.oof ? "" : "ext"} ${r.cm === best[t] ? "best" : ""}" style="background:${c.bg};color:${c.fg}" data-tip="${m}|${tr}|${t}">${f3(r.cm)}</td>`;
+      }
+      const mv = mean[k];
+      h += mv == null ? `<td class="na">—</td>` : `<td class="${mv === bestMean ? "best" : ""}" style="background:${cellColor(mv).bg};color:${cellColor(mv).fg}">${f3(mv)}</td>`;
+      h += `</tr>`;
+    });
+    card.innerHTML = h + `</tbody></table></div>`;
+    el.appendChild(card);
+  }
+}
+
+// ---------- controls ----------
+function renderControls() {
+  const st = document.getElementById("seg-test"), sm = document.getElementById("seg-metric");
+  st.innerHTML = TESTS.map(([k, , s]) => `<button type="button" id="t-${k}" aria-pressed="${state.test === k}" data-k="${k}">${s}</button>`).join("");
+  const avail = METRICS.filter(([k]) => k !== "clip" || state.test !== "ntuh");
+  if (!avail.some(([k]) => k === state.metric)) state.metric = "cm";
+  sm.innerHTML = avail.map(([k, l]) => `<button type="button" id="m-${k}" aria-pressed="${state.metric === k}" data-k="${k}">${l}</button>`).join("");
+  st.onclick = e => { const b = e.target.closest("button"); if (!b) return; state.test = b.dataset.k; save(); renderAll(); };
+  sm.onclick = e => { const b = e.target.closest("button"); if (!b) return; state.metric = b.dataset.k; save(); renderAll(); };
+  document.getElementById("legend").innerHTML = MODELS.map(([, n, sv]) => `<span><i style="background:var(${sv})"></i>${n}</span>`).join("") +
+    `<span><i class="hatch"></i>斜線＝外部測試（測試集不在訓練資料中）</span>` + (state.metric === "cm" ? `<span>細線＝95% 信賴區間</span>` : "");
+}
+
+// ---------- grouped bar chart ----------
+const NS = "http://www.w3.org/2000/svg";
+function svgEl(tag, attrs, parent) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent && parent.appendChild(e); return e; }
+function renderBars() {
+  const host = document.getElementById("bars"); host.innerHTML = "";
+  const W = Math.max(640, host.clientWidth || 640), H = 360, m = { l: 44, r: 12, t: 16, b: 54 };
+  const svg = svgEl("svg", { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "各訓練資料組合的長條圖" }, host);
+  const defs = svgEl("defs", {}, svg);
+  MODELS.forEach(([mk, , sv]) => {
+    const p = svgEl("pattern", { id: `h-${mk}`, width: 6, height: 6, patternUnits: "userSpaceOnUse", patternTransform: "rotate(45)" }, defs);
+    svgEl("rect", { width: 6, height: 6, fill: css("--surface") }, p);
+    svgEl("rect", { width: 2.4, height: 6, fill: css(sv) }, p);
+  });
+  const iw = W - m.l - m.r, ih = H - m.t - m.b, y = v => m.t + ih - v * ih;
+  for (let v = 0; v <= 1.0001; v += 0.2) {
+    svgEl("line", { x1: m.l, x2: W - m.r, y1: y(v), y2: y(v), stroke: v === 0 ? css("--axis") : css("--grid"), "stroke-width": 1 }, svg);
+    const t = svgEl("text", { x: m.l - 8, y: y(v) + 4, "text-anchor": "end", "font-size": 11 }, svg); t.textContent = v.toFixed(1);
+  }
+  const gw = iw / TRAIN.length, inner = gw * 0.74, bw = Math.min(22, (inner - 3 * 2) / 4);
+  const metric = state.metric;
+  TRAIN.forEach(([tr, tl], gi) => {
+    const gx = m.l + gi * gw + (gw - (bw * 4 + 6)) / 2;
+    const lab = svgEl("text", { x: m.l + gi * gw + gw / 2, y: H - m.b + 18, "text-anchor": "middle", "font-size": 11.5 }, svg);
+    lab.textContent = tl;
+    const any = MODELS.some(([mk]) => get(state.test, tr, mk)?.[metric] != null);
+    if (!any) { const n = svgEl("text", { x: m.l + gi * gw + gw / 2, y: y(0) - 8, "text-anchor": "middle", "font-size": 11, fill: css("--muted") }, svg); n.textContent = "未測"; return; }
+    MODELS.forEach(([mk, mn, sv], mi) => {
+      const r = get(state.test, tr, mk); const v = r?.[metric];
+      if (v == null) return;
+      const x = gx + mi * (bw + 2), top = y(v), h = y(0) - top, rad = Math.min(4, bw / 2, h);
+      const d = `M${x},${y(0)} V${top + rad} Q${x},${top} ${x + rad},${top} H${x + bw - rad} Q${x + bw},${top} ${x + bw},${top + rad} V${y(0)} Z`;
+      svgEl("path", { d, fill: r.oof ? css(sv) : `url(#h-${mk})`, stroke: r.oof ? "none" : css(sv), "stroke-width": r.oof ? 0 : 1 }, svg);
+      if (metric === "cm") {
+        const cx = x + bw / 2;
+        svgEl("line", { x1: cx, x2: cx, y1: y(r.lo), y2: y(r.hi), stroke: css("--ink-2"), "stroke-width": 1 }, svg);
+        [r.lo, r.hi].forEach(v2 => svgEl("line", { x1: cx - 3, x2: cx + 3, y1: y(v2), y2: y(v2), stroke: css("--ink-2"), "stroke-width": 1 }, svg));
+      }
+      const hit = svgEl("rect", { x: x - 1, y: m.t, width: bw + 2, height: ih, fill: "transparent", tabindex: 0, "aria-label": `${mn} ${tl} ${f3(v)}` }, svg);
+      hit.dataset.tip = `${mk}|${tr}|${state.test}`;
+    });
+  });
+  const yl = svgEl("text", { x: 12, y: m.t + ih / 2, transform: `rotate(-90 12 ${m.t + ih / 2})`, "text-anchor": "middle", "font-size": 11 }, svg);
+  yl.textContent = METRICS.find(x => x[0] === metric)[1];
+  const tl = TESTS.find(t => t[0] === state.test)[1];
+  document.getElementById("bar-note").textContent = metric === "clip"
+    ? `測試集 ${tl}：Renji 訓練格式 clip（32 秒單一 phase、64 秒含轉換）的 pooled OOF macro-F1；只有訓練資料包含這家 Renji 的組合才有。`
+    : `測試集 ${tl}。滑過長條可看信賴區間、四個階段 F1，以及和「只用 ${HOME[state.test]}」的配對檢定。`;
+}
+
+// ---------- per-phase heatmap ----------
+function renderPhase() {
+  const t = state.test, tl = TESTS.find(x => x[0] === t)[1];
+  document.getElementById("ph-lede").textContent = `測試集 ${tl}。每格是該階段的 F1（只在含有該階段的病例上平均）；「外」＝外部測試。上方切換測試集，這裡會跟著變。`;
+  let h = `<table class="hm"><thead><tr><th class="row">模型／訓練資料</th>${PHASES.map(p => `<th>${p[1]}</th>`).join("")}<th>case-macro</th></tr></thead><tbody>`;
+  for (const [mk, mn, sv] of MODELS) {
+    h += `<tr class="group"><th colspan="6"><span class="sw" style="background:var(${sv})"></span>${mn}</th></tr>`;
+    for (const [tr, tlab] of TRAIN) {
+      const r = get(t, tr, mk); if (!r) continue;
+      h += `<tr><th class="row">${tlab}</th>` + [...PHASES.map(p => p[0]), "cm"].map(k => {
+        const c = cellColor(r[k], 0, 1);
+        return `<td class="${r.oof ? "" : "ext"}" style="background:${c.bg};color:${c.fg}" data-tip="${mk}|${tr}|${t}">${k === "cm" ? f3(r[k]) : f2(r[k])}</td>`;
+      }).join("") + `</tr>`;
+    }
+  }
+  document.getElementById("phase").innerHTML = h + `</tbody></table>`;
+}
+
+// ---------- full table ----------
+function renderTable() {
+  const t = state.test, tl = TESTS.find(x => x[0] === t)[1];
+  document.getElementById("tb-lede").textContent = `測試集 ${tl}。Δ＝和「只用 ${HOME[t]}」訓練的同一模型相比的 case-macro-F1 差（逐例配對）。`;
+  let h = `<thead><tr><th class="l">模型</th><th class="l">訓練資料</th><th class="l">評估</th><th>case-macro</th><th>95% CI</th><th>frame-micro</th><th>診斷</th><th>局部注射</th><th>切開／剝離</th><th>止血</th><th>Δ vs 只用 ${HOME[t]}</th><th>p（bootstrap／Wilcoxon）</th>${t !== "ntuh" ? "<th>clip OOF</th>" : ""}</tr></thead><tbody>`;
+  for (const [mk, mn, sv] of MODELS) {
+    let first = true;
+    for (const [tr, tlab] of TRAIN) {
+      const r = get(t, tr, mk); if (!r) continue;
+      const dcls = r.d == null ? "" : (r.dlo > 0 ? "pos" : r.dhi < 0 ? "neg" : "");
+      h += `<tr class="${first ? "mfirst" : ""}"><td class="l">${first ? `<span class="sw" style="background:var(${sv})"></span>${mn}` : ""}</td><td class="l">${tlab}</td><td class="l">${r.oof ? "OOF" : "外部"}</td>
+        <td><b>${f3(r.cm)}</b></td><td>${f3(r.lo)}–${f3(r.hi)}</td><td>${f3(r.fm)}</td><td>${f2(r.dx)}</td><td>${f2(r.li)}</td><td>${f2(r.id)}</td><td>${f2(r.hem)}</td>
+        <td class="${dcls}">${r.d == null ? "—" : (r.d >= 0 ? "+" : "") + r.d.toFixed(3)}</td><td>${r.d == null ? "" : fp(r.pb) + " / " + fp(r.pw)}</td>${t !== "ntuh" ? `<td>${f3(r.clip)}</td>` : ""}</tr>`;
+      first = false;
+    }
+  }
+  document.getElementById("full").innerHTML = h + `</tbody>`;
+}
+
+// ---------- tooltip ----------
+const tip = document.getElementById("tip");
+function showTip(target, ev) {
+  const [mk, tr, t] = target.dataset.tip.split("|"); const r = get(t, tr, mk); if (!r) return;
+  const mn = MODELS.find(m => m[0] === mk)[1], tl = TRAIN.find(x => x[0] === tr)[1], tt = TESTS.find(x => x[0] === t)[1];
+  const delta = r.d == null ? "" : `<div><span class="k">Δ vs 只用 ${HOME[t]}：</span>${(r.d >= 0 ? "+" : "") + r.d.toFixed(3)} [${r.dlo.toFixed(3)}, ${r.dhi.toFixed(3)}]，p ${fp(r.pb)} / ${fp(r.pw)}</div>`;
+  tip.innerHTML = `<div class="t">${mn} · ${tl} → ${tt}</div><div class="k">${r.oof ? "OOF（每例由沒看過它的 fold 模型預測）" : "外部測試（5 個 fold 模型平均）"}</div>
+    <div>case-macro <b>${f3(r.cm)}</b> [${f3(r.lo)}, ${f3(r.hi)}]　frame-micro ${f3(r.fm)}</div>
+    <div><span class="k">診斷／注射／剝離／止血：</span>${f2(r.dx)} / ${f2(r.li)} / ${f2(r.id)} / ${f2(r.hem)}</div>${delta}${r.clip != null ? `<div><span class="k">clip OOF macro-F1：</span>${f3(r.clip)}</div>` : ""}`;
+  tip.hidden = false;
+  const rect = target.getBoundingClientRect(), x = ev && ev.clientX ? ev.clientX : rect.left + rect.width / 2, yv = ev && ev.clientY ? ev.clientY : rect.top;
+  const tw = tip.offsetWidth, th = tip.offsetHeight;
+  tip.style.left = Math.max(8, Math.min(innerWidth - tw - 8, x + 14)) + "px";
+  tip.style.top = Math.max(8, Math.min(innerHeight - th - 8, yv - th - 12 < 8 ? yv + 18 : yv - th - 12)) + "px";
+}
+document.addEventListener("pointermove", e => { const t = e.target.closest && e.target.closest("[data-tip]"); if (t) showTip(t, e); else tip.hidden = true; });
+document.addEventListener("focusin", e => { const t = e.target.closest && e.target.closest("[data-tip]"); if (t) showTip(t); });
+document.addEventListener("focusout", () => { tip.hidden = true; });
+
+function renderAll() { renderControls(); renderBars(); renderPhase(); renderTable(); }
+renderOverview(); renderAll();
+let rz; addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(renderBars, 120); });
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { renderOverview(); renderAll(); });
+new MutationObserver(() => { renderOverview(); renderAll(); }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+</script>

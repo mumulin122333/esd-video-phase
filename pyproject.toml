@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "esdvideo"
+version = "0.1.0"
+description = "Video VLMs for ESD surgical phase recognition across two hospitals (NTUH, Renji)"
+requires-python = ">=3.10"
+dependencies = ["numpy", "pyyaml", "scipy"]
+
+[project.optional-dependencies]
+vlm = ["torch", "transformers==4.57.3", "huggingface_hub<1.0", "peft>=0.17", "safetensors", "qwen-vl-utils==0.0.14", "molmo_utils==0.0.1", "decord2", "av", "pillow"]
+test = ["pytest"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

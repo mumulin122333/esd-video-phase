@@ -1,0 +1,7 @@
+# Copy to paths.local.yaml (git-ignored) and edit.
+ntuh_phase_root: /path/to/ntuh_esd_phase           # in-house: cases/NTUH_xx/clips/<NN>_<class>/*.MP4
+renji_cnls_root: /path/to/renji-esd-cnls/extracted  # public Renji "ESD for CNLs" release
+renji_egc_root: "/path/to/renji-esd-egc/extracted/ESD for EGC"  # public Renji "ESD for EGC" release
+work_root: /path/to/work        # frames, windows, clips, training sets (about 25 GB)
+runs_root: /path/to/runs        # weights / adapters and predictions
+pretrained_root: /path/to/hf    # <pretrained_root>/<dir from configs/models.yaml>/

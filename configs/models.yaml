@@ -1,0 +1,28 @@
+# Video VLMs. Weights are read from <pretrained_root>/<dir>/ (download with `hf download <repo> --revision <revision> --local-dir ...`).
+qwen38:
+  name: Qwen3.8-27B
+  repo: Qwen/Qwen3.8-27B
+  dir: Qwen3.8-27B
+  engine: llamafactory        # LlamaFactory 0.9.5, transformers 5.5 environment
+  predict_batch: 8
+molmo2:
+  name: Molmo2-8B
+  repo: allenai/Molmo2-8B
+  revision: e28fa28597e5ec5e0cca2201dd8ab33d48bc4a1b
+  dir: Molmo2-8B
+  engine: vlm                 # esdvideo.vlm, transformers 4.57.3 environment
+  predict_batch: 8
+videochat3:
+  name: VideoChat3-4B
+  repo: MCG-NJU/VideoChat3-4B
+  revision: 9f6107bdfee9686dfe493444022f5cf79a1a6acf
+  dir: VideoChat3-4B
+  engine: vlm
+  predict_batch: 16
+internvideo3:
+  name: InternVideo3-8B
+  repo: yanziang/InternVideo3-8B-Instruct   # the only public copy on the Hugging Face Hub
+  revision: c4602918b65225650d152db2850fe34e01d21fcd
+  dir: InternVideo3-8B-Instruct
+  engine: vlm
+  predict_batch: 16
