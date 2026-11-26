@@ -59,7 +59,30 @@ SPECS = {
 
 
 # ----------------------------------------------------------------------------- model / inputs
-def load_model(name: str, path: str, device: str):
+# Modules kept in bf16 when the language model is quantized: vision encoder, projector and output layer
+# (plus InternVideo3's MLA kv_b_proj, whose weight is used directly in the absorbed attention einsum).
+QUANT_SKIP = {
+    "videochat3": ["vision_tower", "multi_modal_projector", "lm_head"],
+    "internvideo3": ["visual", "lm_head", "kv_b_proj"],
+    "molmo2": ["vision_backbone", "lm_head"],
+}
+
+
+def quantization_config(name: str, quant: str | None):
+    """bitsandbytes config for the language model only (int8: LLM.int8; nf4: 4-bit NF4, double quantization)."""
+    if not quant or quant == "bf16":
+        return None
+    from transformers import BitsAndBytesConfig
+
+    if quant == "int8":
+        return BitsAndBytesConfig(load_in_8bit=True, llm_int8_skip_modules=QUANT_SKIP[name])
+    if quant == "nf4":
+        return BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="nf4", bnb_4bit_use_double_quant=True,
+                                  bnb_4bit_compute_dtype=torch.bfloat16, llm_int8_skip_modules=QUANT_SKIP[name])
+    raise ValueError(f"unknown quantization {quant!r}")
+
+
+def load_model(name: str, path: str, device: str, quant: str | None = None):
     from transformers import AutoConfig, AutoModelForCausalLM, AutoModelForImageTextToText, AutoProcessor
 
     spec = SPECS[name]
@@ -68,8 +91,13 @@ def load_model(name: str, path: str, device: str):
     if vc is not None and getattr(vc, "attn_impl", None) == "flash_attention_2":
         vc.attn_impl = "sdpa"  # VideoChat3 vision tower: no flash-attn installed
     cls = AutoModelForCausalLM if spec["auto"] == "causal" else AutoModelForImageTextToText
-    model = cls.from_pretrained(path, config=cfg, dtype=torch.bfloat16, trust_remote_code=True,
-                                attn_implementation="sdpa").to(device)
+    qc = quantization_config(name, quant)
+    if qc is None:
+        model = cls.from_pretrained(path, config=cfg, dtype=torch.bfloat16, trust_remote_code=True,
+                                    attn_implementation="sdpa").to(device)
+    else:
+        model = cls.from_pretrained(path, config=cfg, dtype=torch.bfloat16, trust_remote_code=True,
+                                    attn_implementation="sdpa", quantization_config=qc, device_map={"": device})
     processor = AutoProcessor.from_pretrained(path, trust_remote_code=True)
     processor.tokenizer.padding_side = "left"
     _patch_block_sdpa(model)
@@ -320,12 +348,19 @@ def cmd_predict(args) -> None:
     print(f"{len(todo)} of {len(idx)} rows to predict", flush=True)
     if not todo:
         return
-    model, processor = load_model(args.model, args.model_path, args.device)
+    torch.cuda.reset_peak_memory_stats()
+    model, processor = load_model(args.model, args.model_path, args.device, args.quant)
     if args.weights:
         model = add_lora(args.model, model, args.rank, args.alpha)
         load_trainable(model, args.weights)
-    model.to(torch.bfloat16)
+    if args.quant in (None, "bf16"):
+        model.to(torch.bfloat16)
+    else:  # quantized weights cannot be cast; LoRA and projector weights go to bf16
+        for p_ in model.parameters():
+            if p_.dtype == torch.float32:
+                p_.data = p_.data.to(torch.bfloat16)
     model.eval()
+    loaded_gb = torch.cuda.memory_allocated() / 1e9
     # Batch only windows of the same length: same frame count and size -> same token count, so no
     # padding (InternVideo3's remote code mis-handles left-padded rows).
     groups: dict[int, list[dict]] = {}
@@ -379,6 +414,13 @@ def cmd_predict(args) -> None:
             done_n += len(recs)
             if j % 20 == 0:
                 print(f"{done_n}/{len(sub)} {done_n / (time.time() - t0):.2f} rows/s", flush=True)
+    if args.quant is None:
+        return
+    stats = {"model": args.model, "quant": args.quant or "bf16", "rows": done_n, "seconds": round(time.time() - t0, 1),
+             "rows_per_s": round(done_n / max(1e-9, time.time() - t0), 3), "batch": args.batch,
+             "weights_loaded_gb": round(loaded_gb, 2), "peak_allocated_gb": round(torch.cuda.max_memory_allocated() / 1e9, 2)}
+    Path(str(out) + ".stats.json").write_text(json.dumps(stats) + "\n")
+    print(stats, flush=True)
 
 
 def main() -> None:
@@ -404,6 +446,8 @@ def main() -> None:
     p = sub.choices["predict"]
     p.add_argument("--weights")
     p.add_argument("--batch", type=int, default=8)
+    p.add_argument("--quant", choices=["bf16", "int8", "nf4"], default=None,
+                   help="bitsandbytes quantization of the language model (vision encoder, projector, lm_head stay bf16)")
     p.add_argument("--shard")
     args = ap.parse_args()
     cmd_train(args) if args.cmd == "train" else cmd_predict(args)

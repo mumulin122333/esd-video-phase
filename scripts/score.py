@@ -50,9 +50,9 @@ def windows_meta(work: Path, test: str, fold: int, oof: bool) -> Path:
     return w / f"renji_oof/{test}/fold{fold}/renji_{test}_clips.jsonl" if oof else w / f"external/renji_{test}_clips.jsonl"
 
 
-def window_scores(work: Path, runs: Path, t: str, m: str, test: str):
+def window_scores(work: Path, runs: Path, t: str, m: str, test: str, sub: str = "predictions"):
     oof = contains(t, test)
-    preds = [runs / t / m / f"fold{f}" / "predictions" / f"{test}_windows.jsonl" for f in range(5)]
+    preds = [runs / t / m / f"fold{f}" / sub / f"{test}_windows.jsonl" for f in range(5)]
     if not all(p.exists() for p in preds):
         return None
     if oof:
@@ -70,12 +70,12 @@ def window_scores(work: Path, runs: Path, t: str, m: str, test: str):
             **{f"f1_{p}": float(np.mean(list(average_over_models([r.phase_f1[p] for r in reps]).values()))) for p in PHASES}}
 
 
-def clip_scores(work: Path, runs: Path, t: str, m: str, test: str):
+def clip_scores(work: Path, runs: Path, t: str, m: str, test: str, sub: str = "predictions"):
     if test == "ntuh" or not contains(t, test):
         return None
     clips, preds = [], []
     for f in range(5):
-        pf = runs / t / m / f"fold{f}" / "predictions" / f"{test}_clips.jsonl"
+        pf = runs / t / m / f"fold{f}" / sub / f"{test}_clips.jsonl"
         if not pf.exists():
             return None
         clips += [json.loads(l) for l in open(work / f"renji_clips/{test}/fold{f}/test_clips.jsonl")]
@@ -117,17 +117,19 @@ def main() -> None:
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--tables", type=Path)
     ap.add_argument("--models", nargs="+", default=list(MODELS))
+    ap.add_argument("--sets", nargs="+", default=SETS, help="training sets to score")
+    ap.add_argument("--pred-subdir", default="predictions", help="e.g. predictions_nf4 (scripts/run_quant.py)")
     a = ap.parse_args()
     paths = load_paths()
     out = {}
     for test in TESTS:
         out[test] = {}
         for m in a.models:
-            for t in SETS:
-                w = window_scores(paths.work_root, paths.runs_root, t, m, test)
+            for t in a.sets:
+                w = window_scores(paths.work_root, paths.runs_root, t, m, test, a.pred_subdir)
                 if not w:
                     continue
-                c = clip_scores(paths.work_root, paths.runs_root, t, m, test)
+                c = clip_scores(paths.work_root, paths.runs_root, t, m, test, a.pred_subdir)
                 if c:
                     w["clip"] = c
                 out[test][f"{t}/{m}"] = w

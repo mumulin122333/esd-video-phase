@@ -47,7 +47,8 @@ src/esdvideo/
   metrics.py      case-macro-F1, frame-micro-F1, per-phase F1
   stats.py        case-level bootstrap CI, paired bootstrap, Wilcoxon
   clip_eval.py    clip-level scorer (pooled macro-F1, exact match, boundary MAE)
-scripts/      prepare_*.py (data), run_job.py (train + predict), score.py, hemostasis.py, make_report.py
+scripts/      prepare_*.py (data), run_job.py (train + predict), score.py, hemostasis.py, make_report.py,
+              run_quant.py + llamafactory_quant.py (int8 / NF4 inference)
 jobs/         queue.sh (one worker per GPU) and all_jobs.txt (140 jobs)
 report/       HTML report template (Traditional Chinese)
 tests/        unit tests (windows, answer parsing, metrics)
@@ -101,6 +102,34 @@ python scripts/score.py --out results/scores.json --tables results/tables.md
 python scripts/hemostasis.py --out results/hemostasis.json
 python scripts/make_report.py --scores results/scores.json --out results/report.html
 ```
+
+## Quantized inference (int8 / NF4)
+
+The trained fold models can be run with the language model quantized by bitsandbytes
+(`pip install -e ".[quant]"`; tested with 0.50.2). Only the language model is quantized: the vision
+encoder, projector, `lm_head` and the (unmerged) LoRA weights stay in bf16. InternVideo3 also keeps its
+MLA `kv_b_proj` in bf16, because the absorbed attention uses that weight directly. Qwen3.8 goes through
+LlamaFactory's `quantization_bit`, wrapped so that the vision encoder is skipped as well.
+
+```bash
+for q in bf16 int8 nf4; do
+  python scripts/run_quant.py --set ntuh_cnls_egc --model molmo2 --fold 0 --quant $q --gpu 0
+done   # -> runs/<set>/<model>/fold<k>/predictions_<q>/<test>_windows.jsonl + .stats.json (rows/s, GPU memory)
+python scripts/score.py --sets ntuh_cnls_egc --pred-subdir predictions_nf4 --out results/scores_nf4.json
+```
+
+Result for the NTUH+CNLs+EGC models (out-of-fold windows, 5 folds; peak GPU memory during prediction,
+windows per second on an RTX PRO 6000; the bf16 rerun reproduces the original scores exactly):
+
+| Model | Case-macro-F1 NTUH / CNLs / EGC (bf16 → NF4) | Peak memory bf16 / int8 / NF4 | Windows/s bf16 / int8 / NF4 |
+| --- | --- | --- | --- |
+| Qwen3.8-27B | 0.732 / 0.803 / 0.889 → 0.741 / 0.794 / 0.889 | 57.9 / 33.8 / 21.8 GB | 2.89 / 1.16 / 2.02 |
+| Molmo2-8B | 0.804 / 0.824 / 0.915 → 0.799 / 0.831 / 0.915 | 35.2 / 28.3 / 24.9 GB | 2.17 / 1.64 / 2.07 |
+| InternVideo3-8B | 0.741 / 0.806 / 0.918 → 0.734 / 0.808 / 0.913 | 22.0 / 15.0 / 11.0 GB | 6.93 / 4.07 / 6.33 |
+| VideoChat3-4B | 0.789 / 0.798 / 0.904 → 0.779 / 0.796 / 0.902 | 13.8 / 10.1 / 8.4 GB | 6.08 / 3.62 / 5.49 |
+
+All int8 and NF4 differences from bf16 are within ±0.010 case-macro-F1. NF4 is the practical choice; int8
+saves less memory and is the slowest of the three with the current bitsandbytes kernels.
 
 ## Protocol in brief
 
